@@ -185,6 +185,17 @@ void AppBar::UpdateActiveWindow()
     HWND hFg = GetForegroundWindow();
     if (!hFg || hFg == m_hWnd) return; // Don't overwrite with our own title
     GetWindowTextW(hFg, m_activeTitle, _countof(m_activeTitle));
+
+    // Fetch the app's 16x16 icon. Use ICON_SMALL2 (the best small icon).
+    // Fallback to GCLP_HICONSM (class icon). If neither available, null = no icon drawn.
+    DWORD_PTR result = 0;
+    SendMessageTimeoutW(hFg, WM_GETICON, ICON_SMALL2, 0,
+                        SMTO_ABORTIFHUNG | SMTO_ERRORONEXIT, 50, &result);
+    HICON hIco = (HICON)result;
+    if (!hIco) {
+        hIco = (HICON)GetClassLongPtrW(hFg, GCLP_HICONSM);
+    }
+    m_activeIcon = hIco; // Owned by the window — do NOT destroy
 }
 
 // =====================================================================
@@ -204,12 +215,19 @@ void AppBar::Paint(HDC hdc)
     HFONT fontMain = m_renderer.fontMain;
     HFONT fontBold = m_renderer.fontBold;
 
-    // 2. LEFT ZONE: ZenBar icon + active window title
+    // 2. LEFT ZONE: ZenBar icon + active app icon + active window title
     {
         int x = 14;
-        HICON hIcon = LoadIcon(GetModuleHandle(nullptr), MAKEINTRESOURCE(107)); // IDI_ZenBar
-        DrawIconEx(memDC, x, (barH - 16) / 2, hIcon, 16, 16, 0, nullptr, DI_NORMAL);
+        HICON hZenBarIcon = LoadIcon(GetModuleHandle(nullptr), MAKEINTRESOURCE(107)); // IDI_ZenBar
+        DrawIconEx(memDC, x, (barH - 16) / 2, hZenBarIcon, 16, 16, 0, nullptr, DI_NORMAL);
         x += 24; // 16 width + 8 padding
+
+        // Draw active app icon (if available) — no fallback, ZenBar logo is enough
+        if (m_activeIcon) {
+            DrawIconEx(memDC, x, (barH - 16) / 2, m_activeIcon, 16, 16, 0, nullptr, DI_NORMAL);
+            x += 22; // 16 width + 6 padding
+        }
+
         if (m_activeTitle[0]) {
             // Trim to 40 chars so it doesn't bleed into the center
             WCHAR title[44] = {};
@@ -500,8 +518,11 @@ LRESULT AppBar::HandleMessage(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
                         }, (LPARAM)&ctx);
 
                         if (ctx.foundHwnd) {
+                            // SetForegroundWindow silently fails when ZenBar (WS_EX_NOACTIVATE)
+                            // is not the foreground owner. SwitchToThisWindow bypasses that.
                             if (IsIconic(ctx.foundHwnd)) ShowWindow(ctx.foundHwnd, SW_RESTORE);
-                            SetForegroundWindow(ctx.foundHwnd);
+                            AllowSetForegroundWindow(ASFW_ANY);
+                            SwitchToThisWindow(ctx.foundHwnd, TRUE);
                         } else {
                             // Fallback to launching
                             wchar_t uri[256];

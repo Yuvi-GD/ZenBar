@@ -59,3 +59,9 @@ x86/
 *.swp
 *.tmp
 *.temp
+
+# Inno Setup output
+dist/
+
+# Resource editor binary cache
+*.aps
