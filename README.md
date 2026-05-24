@@ -1,63 +1,122 @@
+<div align="center">
+
 # ZenBar
 
-A sleek, minimalistic, and highly customizable status bar for Windows. It sits at the top edge of your screen and provides beautiful, glanceable system statistics such as Network Speed, CPU Temperature, Battery Status, Media Controls, and Brightness/Volume indicators. 
+**A sleek, minimal status bar for Windows 10 & 11**
 
-When you use the "Auto-Hide" feature, it remains completely out of your way until you hover at the top of your screen. It even features built-in Min, Max, and Close buttons so that you can close the underlying windows effortlessly.
+ZenBar sits at the very top edge of your screen — always visible, never in the way. It gives you instant access to system stats, media controls, and window management in a single, beautiful bar.
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Platform: Windows](https://img.shields.io/badge/Platform-Windows%2010%2F11-blue)](https://github.com/Yuvi-GD/ZenBar/releases)
+[![Release](https://img.shields.io/github/v/release/Yuvi-GD/ZenBar)](https://github.com/Yuvi-GD/ZenBar/releases/latest)
+
+</div>
+
+---
 
 ## ✨ Features
 
-- **Network Speed**: Real-time upload and download speeds, directly from your active network adapters.
-- **Hardware Monitoring**: Integrates with LibreHardwareMonitor to display accurate CPU temperatures.
-- **Advanced Battery Status**: Not just percentage, but actual system states including "Charging" (CHG), "Battery Mode" (BAT), and Windows 11 "Battery Saver Mode" (BSM). The bottom edge of the bar acts as a thin visual progress bar for your battery life!
-- **Media Controls**: Elegant now-playing text and transport controls that integrate natively with Windows Media APIs (WinRT). Control Spotify, Chrome, or any supported media player.
-- **Quick Controls**: Glanceable volume and brightness indicators. You can even scroll your mouse wheel over them to adjust brightness and volume rapidly without opening any menus!
-- **Sleek Customizability**: Includes a native Dark Mode Settings window to configure auto-hide delays, sizing, and run-on-startup behavior.
+| Feature | Description |
+|---|---|
+| 🕐 **Clock** | Clean date & time display in the center |
+| 🌐 **Network Speed** | Real-time upload & download from active adapters |
+| 💻 **CPU Usage** | Live CPU load percentage |
+| 🔊 **Volume** | Scroll the mouse wheel to adjust — no menus needed |
+| ☀️ **Brightness** | DDC/CI monitor brightness via scroll wheel |
+| 🔋 **Battery** | Percentage + charging state + bottom-edge progress bar |
+| 🎵 **Media Controls** | Native WinRT integration — works with Spotify, Chrome, etc. |
+| 🖥️ **Window Controls** | Min / Max / Close the active window from the bar |
+| 🪟 **Active App** | Shows the foreground app's icon and title in the left zone |
+| ⚙️ **Settings** | Dark-themed settings panel for all customization |
 
-## 🛠️ Built With
-- **C++20**
-- **Win32 API** (GDI for fast, native drawing)
-- **Windows Runtime (WinRT)** for media controls integration
-- **WMI (Windows Management Instrumentation)** for system hardware metrics
-- **Visual Studio 2022**
+---
 
-## 🚀 Getting Started
+## 🚀 Download & Install
 
-> ⚠️ **Note on Windows SmartScreen:** 
-> Because ZenBar is a newly released, unsigned open-source utility, Windows SmartScreen will show a blue *"Windows protected your PC"* popup on your first download. 
-> 
-> The entire project is transparently open-source right here for you to audit! You can easily bypass the warning using either method below.
+> [!WARNING]
+> **Windows SmartScreen** will show a blue *"Windows protected your PC"* popup on first launch because ZenBar is a newly-released, open-source app without a paid code-signing certificate. The full source code is available right here to audit.
 
-### 📥 Download & Install (For Regular Users)
+### Installing ZenBar
 
-If you don't want to compile the code from source, you can download the ready-to-use application archive:
+1. Go to the **[Releases Page](../../releases)** and download `ZenBar-1.0.0-Setup.exe`
+2. Run the installer
+3. If SmartScreen appears: click **"More info"** → **"Run anyway"**
+4. Choose your install type:
+   - **All Users** → installs to `C:\Program Files\ZenBar\` (requires admin)
+   - **Current User** → installs to `AppData\Local\Programs\ZenBar\` (no admin needed)
+5. ZenBar launches automatically and is now searchable in the Start Menu
 
-1. Go to the **[Releases Page](../../releases)** on GitHub and download the latest `ZenBar.zip`.
-2. **Bypass SmartScreen** using one of these quick options:
-   - **The GUI Way:** Double-click the ZIP. If the warning pops up, click **"More info"** and then select **"Run anyway"**.
-   - **The PowerShell Way:** Open PowerShell in your Downloads directory and instantly strip the web tracking flag by running:
+### Uninstalling
+
+Use **Add or Remove Programs** in Windows Settings — ZenBar registers a proper uninstaller.
+
+---
+
+## 🛠️ Build from Source
+
+**Requirements:**
+- Windows 10 / 11
+- Visual Studio 2022 with **Desktop development with C++** workload
+- Windows 10/11 SDK
+
+**Steps:**
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/Yuvi-GD/ZenBar.git
+   cd ZenBar
+   ```
+2. Open `ZenBar.sln` in Visual Studio 2022
+3. Set configuration to **Release | x64**
+4. Press `Ctrl+Shift+B` to build
+5. Run `x64\Release\ZenBar.exe`
+
+**To build the installer** (requires [Inno Setup 6](https://jrsoftware.org/isinfo.php)):
 ```powershell
-     Unblock-File -Path .\ZenBar.zip
+"C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\ZenBar.iss
 ```
-3. Extract the ZIP file safely.
-4. Double-click `ZenBar.exe` to run it! (You can also configure it to run on startup directly from its Settings menu).
+Output: `dist\ZenBar-1.0.0-Setup.exe`
 
-### 🛠️ Build & Setup (For Developers)
-1. Clone the repository to your local machine.
-2. Double click on the `ZenBar.sln` to open the project in Visual Studio 2022.
-3. At the top toolbar, ensure your build configuration is set to **Debug** or **Release** and your architecture is set to **x64**. *(Note: x86 is not supported)*
-4. Go to `Build -> Build Solution` (or press `Ctrl+Shift+B`).
-5. Run the executable `ZenBar.exe` from the `x64/Release` (or `x64/Debug`) folder!
+---
+
+## ⚙️ Default Settings
+
+| Setting | Default |
+|---|---|
+| Auto-Hide | Off |
+| Auto-Hide Delay | 500 ms |
+| Show Window Controls | On (Auto-Hide mode only) |
+| Volume Scroll Step | 2% |
+| Brightness Scroll Step | 5% |
+| Bar Height | 32 px |
+| Run on Startup | On |
+
+All settings are saved to `config.ini` next to the executable.
+
+## 🔮 Roadmap
+
+ZenBar is actively developed. Here's what's coming next:
+
+### v2.0 — WinUI 3 Redesign *(Next Major Release)*
+- Complete UI overhaul using **WinUI 3** for a modern, native Windows 11 aesthetic
+- **Notification Center widget** — live notification count and quick dismiss
+- **Quick Controls widget** — toggle Wi-Fi, Bluetooth, Focus Assist, and more
+- Fluent Design system, Mica/Acrylic materials
+- Full settings redesign with a proper window
+
+---
 
 ## 🤝 Contributing
 
-Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+Contributions are very welcome!
 
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
+1. Fork the project
+2. Create your feature branch: `git checkout -b feature/AmazingFeature`
+3. Commit your changes: `git commit -m 'Add AmazingFeature'`
+4. Push: `git push origin feature/AmazingFeature`
 5. Open a Pull Request
+
+---
 
 ## 📝 License
 
-Distributed under the MIT License. See the **[LICENSE](LICENSE)** file for more information.
+Distributed under the **MIT License** — see **[LICENSE](LICENSE)** for details.
