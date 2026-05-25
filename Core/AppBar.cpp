@@ -183,19 +183,35 @@ void AppBar::PositionBar()
 void AppBar::UpdateActiveWindow()
 {
     HWND hFg = GetForegroundWindow();
-    if (!hFg || hFg == m_hWnd) return; // Don't overwrite with our own title
+    if (!hFg || hFg == m_hWnd) return;
     GetWindowTextW(hFg, m_activeTitle, _countof(m_activeTitle));
 
-    // Fetch the app's 16x16 icon. Use ICON_SMALL2 (the best small icon).
-    // Fallback to GCLP_HICONSM (class icon). If neither available, null = no icon drawn.
-    DWORD_PTR result = 0;
-    SendMessageTimeoutW(hFg, WM_GETICON, ICON_SMALL2, 0,
-                        SMTO_ABORTIFHUNG | SMTO_ERRORONEXIT, 50, &result);
-    HICON hIco = (HICON)result;
-    if (!hIco) {
-        hIco = (HICON)GetClassLongPtrW(hFg, GCLP_HICONSM);
+    // Only re-fetch the icon when the foreground window actually changes.
+    // Avoid sending messages to starting applications as it can cause them to hang.
+    if (hFg == m_activeFgHwnd) return;
+    m_activeFgHwnd = hFg;
+
+    // Destroy previous icon if we loaded it ourselves
+    if (m_activeIcon) {
+        DestroyIcon(m_activeIcon);
+        m_activeIcon = nullptr;
     }
-    m_activeIcon = hIco; // Owned by the window — do NOT destroy
+
+    // Safest way to get an icon without sending messages to a potentially unresponsive window:
+    // Extract the icon directly from the process executable.
+    DWORD pid = 0;
+    GetWindowThreadProcessId(hFg, &pid);
+    if (pid) {
+        HANDLE hProc = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid);
+        if (hProc) {
+            wchar_t path[MAX_PATH] = {};
+            DWORD sz = MAX_PATH;
+            if (QueryFullProcessImageNameW(hProc, 0, path, &sz)) {
+                ExtractIconExW(path, 0, nullptr, &m_activeIcon, 1);
+            }
+            CloseHandle(hProc);
+        }
+    }
 }
 
 // =====================================================================
@@ -524,10 +540,57 @@ LRESULT AppBar::HandleMessage(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
                             AllowSetForegroundWindow(ASFW_ANY);
                             SwitchToThisWindow(ctx.foundHwnd, TRUE);
                         } else {
-                            // Fallback to launching
-                            wchar_t uri[256];
-                            swprintf_s(uri, L"shell:AppsFolder\\%s", w.media_appId);
-                            ShellExecuteW(nullptr, L"open", uri, nullptr, nullptr, SW_SHOW);
+                            // AUMID matching failed. Fall back: extract the executable name from
+                            // media_appId and match by process name instead.
+                            struct FindByExeCtx {
+                                wchar_t exeName[64];
+                                HWND    foundHwnd;
+                            } exeCtx = {};
+                            exeCtx.foundHwnd = nullptr;
+
+                            // Extract executable basename from AUMID.
+                            const wchar_t* dot = wcsrchr(w.media_appId, L'.');
+                            const wchar_t* slash = wcsrchr(w.media_appId, L'\\');
+                            const wchar_t* base = slash ? slash + 1 : w.media_appId;
+                            if (dot && _wcsicmp(dot, L".exe") == 0) {
+                                wcscpy_s(exeCtx.exeName, base);
+                            } else {
+                                exeCtx.exeName[0] = 0;
+                            }
+
+                            if (exeCtx.exeName[0]) {
+                                EnumWindows([](HWND hwnd, LPARAM lp) -> BOOL {
+                                    FindByExeCtx* pC = (FindByExeCtx*)lp;
+                                    if (!IsWindowVisible(hwnd)) return TRUE;
+                                    DWORD pid = 0;
+                                    GetWindowThreadProcessId(hwnd, &pid);
+                                    if (!pid) return TRUE;
+                                    HANDLE hProc = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid);
+                                    if (!hProc) return TRUE;
+                                    wchar_t path[MAX_PATH] = {};
+                                    DWORD sz = MAX_PATH;
+                                    QueryFullProcessImageNameW(hProc, 0, path, &sz);
+                                    CloseHandle(hProc);
+                                    const wchar_t* name = wcsrchr(path, L'\\');
+                                    name = name ? name + 1 : path;
+                                    if (_wcsicmp(name, pC->exeName) == 0) {
+                                        pC->foundHwnd = hwnd;
+                                        return FALSE; // found
+                                    }
+                                    return TRUE;
+                                }, (LPARAM)&exeCtx);
+                            }
+
+                            if (exeCtx.foundHwnd) {
+                                if (IsIconic(exeCtx.foundHwnd)) ShowWindow(exeCtx.foundHwnd, SW_RESTORE);
+                                AllowSetForegroundWindow(ASFW_ANY);
+                                SwitchToThisWindow(exeCtx.foundHwnd, TRUE);
+                            } else {
+                                // Final fallback: launch via shell
+                                wchar_t uri[256];
+                                swprintf_s(uri, L"shell:AppsFolder\\%s", w.media_appId);
+                                ShellExecuteW(nullptr, L"open", uri, nullptr, nullptr, SW_SHOW);
+                            }
                         }
                         return 0;
                     }

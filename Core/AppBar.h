@@ -29,6 +29,7 @@ private:
     // Active window title + icon — shown in left zone (like macOS menu bar)
     WCHAR m_activeTitle[128]   = {};
     HICON m_activeIcon         = nullptr; // 16x16 icon of foreground app (null = show none)
+    HWND  m_activeFgHwnd       = nullptr; // Cache — skip icon fetch if HWND unchanged
 
     // Battery power notification GUID (GUID_BATTERY_PERCENTAGE_REMAINING)
     // Defined manually to avoid requiring batclass.h (DDK header)
